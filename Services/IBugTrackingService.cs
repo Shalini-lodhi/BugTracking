@@ -35,6 +35,8 @@ namespace BugTracking.Services
         //Creating Message
         Task<MessageViewModel> CreateMessageAsync(MessageCreateViewModel messageModel, int bugId);
 
+        //---------------------------------------------------------
         //DashBoard
+        Task<DashBoardViewModel> GetDashBoardViewModel();
     }
 }

@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using BugTracking.Services;
 using BugTracking.ViewModels;
 using BugTracking.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BugTracking.Controllers
 {
+    
     [Route("api/v1/[controller]")]
     [ApiController]
     public class BugTrackingController : ControllerBase
@@ -13,7 +15,7 @@ namespace BugTracking.Controllers
         private readonly IBugTrackingService _service;
         public BugTrackingController(IBugTrackingService service)
         {
-            _service = service;
+            this._service = service;
         }
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProjectViewModel>>> GetAllProjectAsync()
@@ -30,7 +32,7 @@ namespace BugTracking.Controllers
         {
             return Ok(await _service.CreateProjectAsync(projectModel));
         }
-
+        /*----------------------------------------------------------*/
         //Bugs
         [HttpGet("{projectId:int}/bugs")]
         public async Task<ActionResult<IEnumerable<BugViewModel>>> GetAllBugsInProjectAsync(int projectId)
@@ -38,12 +40,13 @@ namespace BugTracking.Controllers
             return Ok(await _service.GetAllBugsInProjectAsync(projectId));
         }
 
-
-        [HttpGet("{projectId:int}/bugs/{bugsId:int}")]
+        //Bug by Id
+        [HttpGet("{projectId:int}/bugs/{bugId:int}")]
         public async Task<ActionResult<BugViewModel>> GetBugByIdAsync(int bugId)
         {
             return Ok(await _service.GetBugByIdAsync(bugId));
         }
+
         //bug submission
         [HttpPost("{projectId:int}/report-bug")]
         public async Task<ActionResult<BugViewModel>> CreateBugAsync(BugCreateViewModel bugModel, int projectId)
@@ -53,22 +56,32 @@ namespace BugTracking.Controllers
 
         /*----------------------------------------------------------*/
         //Getting all the messages
-        [HttpGet("{projectId:int}/bugs/{bugsId:int}/messages")]
+        [HttpGet("{projectId:int}/bugs/{bugId:int}/messages")]
         public async Task<ActionResult<MessageViewModel>> GetAllMessagesInBugAsync(int bugId)
         {
             return Ok(await _service.GetAllMessagesInBugAsync(bugId));
         }
 
         //Get Message by Id
-        [HttpGet("{projectId:int}/bugs/{bugsId:int}/messages/{messageId:int}")]
+        [HttpGet("{projectId:int}/bugs/{bugId:int}/messages/{messageId:int}")]
         public async Task<ActionResult<MessageViewModel>> GetMessageByIdAsync(int messageId)
         {
             return Ok(await _service.GetMessageByIdAsync(messageId));
         }
-        [HttpPost("{projectId:int}/bugs/{bugsId:int}/add-message")]
+        [HttpPost("{projectId:int}/bugs/{bugId:int}/add-message")]
         public async Task<ActionResult<MessageViewModel>> CreateMessageAsync(MessageCreateViewModel messageModel, int bugId)
         {
-            return Ok(await _service.CreateMessageAsync(messageModel, bugId));
+            var res = await _service.CreateMessageAsync(messageModel, bugId);
+            //checking whether bug is resolved or not
+            return res == null ? Ok("Bug is closed. Can't add message any more!") : Ok(res);
+        }
+
+        /*----------------------------------------------------*/
+        //Dashboard
+        [HttpGet("dashBoard")]
+        public async Task<ActionResult<DashBoardViewModel>> GetDashBoardViewModel()
+        {
+            return Ok(await _service.GetDashBoardViewModel());
         }
     }
 }

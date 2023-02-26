@@ -42,7 +42,7 @@ namespace BugTracking.Services
         //Getting project through Id
         public async Task<ProjectViewModel> GetProjectByIdAsync(int p_id)
         {
-            return ToProjectViewModel(await FromProjectId(p_id));
+            return ToProjectViewModel(await _context.Projects.FirstAsync(p => p.ProjectId == p_id));
         }
 
 
@@ -54,15 +54,17 @@ namespace BugTracking.Services
                 .Select(b => new BugViewModel
                 {
                     BugId = b.BugId,
-                    ProjectId = projectId,
+                    ProjectId = b.ProjectId,
                     Status = b.Status.ToString()
                 })
                 .ToListAsync();
         }
-        //Getting bug through Id
-        public async Task<BugViewModel> GetBugByIdAsync(int b_id)
+
+        public async Task<BugViewModel> GetBugByIdAsync(int bugId)
         {
-            return ToBugViewModel(await FromBugId(b_id));
+            Console.WriteLine($"bugId = {bugId}");
+            var bug = await _context.Bugs.FirstAsync(b => b.BugId == bugId);
+            return ToBugViewModel(bug);
         }
         //Create Bug
         public async Task<BugViewModel> CreateBugAsync(BugCreateViewModel bug, int projectid)
@@ -80,11 +82,11 @@ namespace BugTracking.Services
         //1. Getting all the Message
         public async Task<IEnumerable<MessageViewModel>> GetAllMessagesInBugAsync(int bugId)
         {
-            return await _context.Messages
+            return await _context.Messages.Where(m=>m.BugId == bugId)
                 .Select(m => new MessageViewModel
                 {
                     MessageId = m.MessageId,
-                    BugId = bugId,
+                    BugId = m.BugId,
                     SubmissionId = m.SubmissionId,
                     Text = m.Text,
                     IsResolved = m.IsResolved 
@@ -94,7 +96,7 @@ namespace BugTracking.Services
         //Getting Message through Id
         public async Task<MessageViewModel> GetMessageByIdAsync(int m_id)
         {
-            return ToMessageViewModel(await FromMessageId(m_id));
+            return ToMessageViewModel(await _context.Messages.FirstAsync(m => m.MessageId == m_id));
         }
 
         //Create Message
@@ -114,7 +116,7 @@ namespace BugTracking.Services
             }
             if (messageCount == 0)
             {
-                if (bug.Status == BugStatus.Resolved)
+                if (bug.Status == BugStatus.Open)
                     bug.Status = BugStatus.Working;
             }
             if (m.IsResolved)
@@ -125,23 +127,25 @@ namespace BugTracking.Services
             return ToMessageViewModel(m);
         }
 
-        /*----------------------------------------------*/
+        /*-----------------------------------------------*/
+        //DSAHBOARD
+        public async Task<DashBoardViewModel> GetDashBoardViewModel()
+        {
+            var totalBugs = await _context.Bugs.CountAsync();
+            var totalResolvedBugs = await _context.Bugs.Where(rb => rb.Status == BugStatus.Resolved).CountAsync();
+            var totalOpenBugs = await _context.Bugs.Where(rb => rb.Status == BugStatus.Open).CountAsync();
+            var totalWorkingBugs = await _context.Bugs.Where(rb => rb.Status == BugStatus.Working).CountAsync();
 
-        //From Id Method
-        private async Task<Project> FromProjectId(int id)
-        {
-            return await _context.Projects.FirstAsync(p => p.ProjectId == id);
+            return new DashBoardViewModel
+            {
+                TotalBugCount = totalBugs,
+                TotalOpenBugs = totalBugs,
+                TotalResolvedBugs = totalResolvedBugs,
+                TotalWorkingBugs = totalWorkingBugs
+            };
         }
-        private async Task<Bug> FromBugId(int id)
-        {
-            return await _context.Bugs.FirstAsync(p => p.BugId == id);
-        }
-        private async Task<Message> FromMessageId(int id)
-        {
-            return await _context.Messages.FirstAsync(m => m.MessageId == id);
-        }
-        /*----------------------------------------------*/
 
+        /*----------------------------------------------*/
         //To View Model
         private ProjectViewModel ToProjectViewModel(Project p)
         {
@@ -183,6 +187,7 @@ namespace BugTracking.Services
                 Owner = p.Owner
             };
         }
+
         private Bug ToBugEntity(BugCreateViewModel b)
         {
             return new Bug
